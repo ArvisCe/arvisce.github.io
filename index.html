@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Odd One Out — i18n + same‑type questions</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --text:#eaecef; --muted:#a8b3cf;
+    --accent:#6aa8ff; --accent-2:#9dff6a; --danger:#ff6a6a;
+    --radius:14px; --gap:14px; --blur:8px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:radial-gradient(1200px 800px at 20% -10%,#1e222d 0%,#0f1115 60%) fixed,#0f1115;color:var(--text);
+    font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,Noto Sans;
+    display:flex;flex-direction:column;gap:var(--gap);align-items:center;padding:24px}
+  h1{margin:0;font-size:clamp(20px,3vw,28px)}
+  .sub{color:var(--muted)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  select,button{appearance:none;border:1px solid #2a2f3b;background:#131826;color:var(--text);
+    padding:10px 12px;border-radius:10px;font-weight:600}
+  button.primary{background:#102038;border-color:#365b8f}
+  button.accent{background:#0f1b33;border-color:#3a7df5}
+  button.danger{background:#2a1515;border-color:#5a2a2a}
+  .pill{display:inline-block;border:1px solid #2a2f3b;border-radius:999px;padding:4px 10px;color:#b9c6e9;font-size:12px}
+  .grid{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(260px,1fr));width:100%;max-width:980px}
+  @media (max-width:700px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,#1b2030,#171a21);border:1px solid #262b36;border-radius:var(--radius);padding:16px 16px 12px}
+  .name{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-weight:700}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  .spoiler{position:relative;border:1px dashed #2a2f3b;border-radius:10px;padding:14px;min-height:64px;background:rgba(18,21,28,.6)}
+  .spoiler[data-revealed="false"] .spoiler-text{filter:blur(var(--blur));user-select:none}
+  .spoiler[data-revealed="false"] .veil{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cdd7f5;font-weight:600;background:linear-gradient(180deg,rgba(12,14,18,0),rgba(12,14,18,.25));pointer-events:none}
+  .row{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .common-box{width:100%;max-width:980px;border:1px solid #2a2f3b;border-radius:12px;padding:14px;background:linear-gradient(180deg,#141924,#11151d);display:none}
+  .common-box.show{display:block}
+  .common-title{font-weight:800;color:var(--accent-2);margin-bottom:6px}
+  .tiny{color:var(--muted);font-size:12px}
+  .warn{color:#ffd27d;font-weight:600}
+</style>
+</head>
+<body>
+  <h1 data-i18n="title">Odd One Out — Question Spoilers</h1>
+  <div class="sub" data-i18n="subtitle">3 players get the same question. 1 random player gets a different one. Click your card to reveal privately.</div>
+
+  <div class="toolbar" style="margin-top:6px">
+    <span class="pill" id="round-pill">Round: —</span>
+    <button class="primary" id="reveal-common" data-i18n="reveal_common">Reveal Common Question</button>
+    <button class="accent" id="new-round" data-i18n="new_round">New Round (no refresh)</button>
+    <button class="danger" id="hide-common" style="display:none" data-i18n="hide_common">Hide Common</button>
+    <label class="pill" for="lang">🌐 <span data-i18n="language">Language</span>:</label>
+    <select id="lang" title="Language">
+      <option value="en">English</option>
+      <option value="lv">Latviešu</option>
+    </select>
+    <label class="pill">🔒 <span data-i18n="same_type">Same‑type enforced</span></label>
+  </div>
+
+  <section class="grid" id="cards"></section>
+
+  <section id="common" class="common-box" aria-live="polite">
+    <div class="common-title" data-i18n="common_title">Common Question</div>
+    <div id="common-text"></div>
+    <div class="tiny" data-i18n="tip">Tip: give short hints before full answers so the odd one must bluff.</div>
+  </section>
+
+<script>
+/** ================= i18n ================= */
+const I18N = {
+  en: {
+    title: "Odd One Out — Question Spoilers",
+    subtitle: "3 players get the same question. 1 random player gets a different one. Click your card to reveal privately.",
+    reveal_common: "Reveal Common Question",
+    new_round: "New Round (no refresh)",
+    hide_common: "Hide Common",
+    language: "Language",
+    same_type: "Same‑type enforced",
+    common_title: "Common Question",
+    tip: "Tip: give short hints before full answers so the odd one must bluff.",
+    click_to_reveal: "Click to reveal",
+    btn_show: "Show",
+    btn_hide: "Hide"
+  },
+  lv: {
+    title: "Svešais — Jautājumu kartītes",
+    subtitle: "3 spēlētāji saņem vienu un to pašu jautājumu. 1 nejaušs spēlētājs saņem citu. Klikšķini uz savas kartītes, lai atklātu privāti.",
+    reveal_common: "Parādīt kopīgo jautājumu",
+    new_round: "Jauns raunds (bez pārlādes)",
+    hide_common: "Slēpt kopīgo",
+    language: "Valoda",
+    same_type: "Vienāda veida nodrošinājums",
+    common_title: "Kopīgais jautājums",
+    tip: "Padoms: sākumā dodiet īsus mājienus, lai svešais būtu spiests blefot.",
+    click_to_reveal: "Klikšķini, lai atklātu",
+    btn_show: "Rādīt",
+    btn_hide: "Slēpt"
+  }
+};
+
+function applyI18n(lang){
+  const dict = I18N[lang] || I18N.en;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if (dict[key]) el.textContent = dict[key];
+  });
+}
+
+/** ================= Config ================= */
+const PLAYER_NAMES = ["Linda","Arvis","Niks","Jasmina"]; // Customize freely
+
+// Each pack is a TOPIC with QUESTIONS of the SAME TYPE (either all opinion/open or all factual)
+// -> This guarantees the odd one never gets a wildly different style like “How tall is Everest?” vs “Best potato form?”
+// Keep wording simple for translation.
+const QUESTION_PACKS = [
+  {
+    topic: { en: "Food preferences", lv: "Ēdienu izvēles" },
+    type: "opinion",
+    questions: [
+      { en:"Which fruit is the best in summer?", lv:"Kurš auglis vasarā ir vislabākais?" },
+      { en:"Which hot drink is better in the morning?", lv:"Kurš karstais dzēriens no rīta ir labāks?" },
+      { en:"What is the best way to cook eggs?", lv:"Kāds ir labākais veids, kā pagatavot olas?" },
+      { en:"Which pizza topping is overrated?", lv:"Kurš picas papildinājums ir pārvērtēts?" }
+    ]
+  },
+  {
+    topic: { en: "Travel & places", lv: "Ceļošana un vietas" },
+    type: "opinion",
+    questions: [
+      { en:"Which city should everyone visit once?", lv:"Kuru pilsētu ikvienam vajadzētu apmeklēt vismaz reizi?" },
+      { en:"Beach or mountains for a weekend?", lv:"Pludmale vai kalni nedēļas nogalei?" },
+      { en:"What is the best way to travel 300 km?", lv:"Kā labāk ceļot 300 km attālumu?" },
+      { en:"Which season is best for travel?", lv:"Kurš gadalaiks ir labākais ceļošanai?" }
+    ]
+  },
+  {
+    topic: { en: "Everyday choices", lv: "Ikdienas izvēles" },
+    type: "opinion",
+    questions: [
+      { en:"What is the best time of day to work?", lv:"Kurš diennakts laiks ir labākais darbam?" },
+      { en:"Which app do you open first in the morning?", lv:"Kuru lietotni tu atver pirmo no rīta?" },
+      { en:"What is the most useful kitchen tool?", lv:"Kurš virtuves rīks ir vislietderīgākais?" },
+      { en:"Which is the superior potato form?", lv:"Kurā veidā kartupeļi ir visgaršīgākie?" }
+    ]
+  },
+  {
+    topic: { en: "Simple facts", lv: "Vienkārši fakti" },
+    type: "fact",
+    questions: [
+      { en:"How many days are in a week?", lv:"Cik dienu ir nedēļā?" },
+      { en:"How many minutes are in one hour?", lv:"Cik minūšu ir vienā stundā?" },
+      { en:"How many months are in a year?", lv:"Cik mēnešu ir gadā?" },
+      { en:"How many wheels does a bicycle have?", lv:"Cik riteņu ir velosipēdam?" }
+    ]
+  },
+  {
+    topic: { en: "World facts (easy)", lv: "Pasaules fakti (vieglie)" },
+    type: "fact",
+    questions: [
+      { en:"Which continent is Italy in?", lv:"Kurā kontinentā atrodas Itālija?" },
+      { en:"What ocean is west of Europe?", lv:"Kurš okeāns atrodas uz rietumiem no Eiropas?" },
+      { en:"What is the capital of France?", lv:"Kas ir Francijas galvaspilsēta?" },
+      { en:"How many continents are there (standard school)?", lv:"Cik kontinentu pastāv (skolas standarts)?" }
+    ]
+  }
+];
+
+/** ================= State ================= */
+let currentRound = 1;
+let commonQuestion = "";
+let oddQuestion = "";
+let oddIndex = -1;
+let currentPackIndex = 0;
+let LANG = localStorage.getItem('ooo_lang') || 'en';
+
+/** ================= Helpers ================= */
+function tQuestion(q){ return q[LANG] || q.en; }
+function tPackName(p){ return p.topic?.[LANG] || p.topic?.en || ""; }
+
+function pickTwoDifferent(arr){
+  if (arr.length < 2) return [arr[0], arr[0]];
+  const a = Math.floor(Math.random()*arr.length);
+  let b; do { b = Math.floor(Math.random()*arr.length) } while (b===a);
+  return [arr[a], arr[b]];
+}
+
+function rollRound(){
+  // choose a pack at random to enforce same-type questions
+  currentPackIndex = Math.floor(Math.random()*QUESTION_PACKS.length);
+  const pack = QUESTION_PACKS[currentPackIndex];
+  const [q1, q2] = pickTwoDifferent(pack.questions);
+  commonQuestion = tQuestion(q1);
+  oddQuestion = tQuestion(q2);
+  oddIndex = Math.floor(Math.random()*PLAYER_NAMES.length);
+}
+
+function makeCard(name, index){
+  const card = document.createElement('div'); card.className='card';
+  const head = document.createElement('div'); head.className='name';
+  const dot = document.createElement('span'); dot.className='dot'; head.appendChild(dot);
+  head.appendChild(Object.assign(document.createElement('div'),{textContent:name}));
+
+  const spoiler = document.createElement('div'); spoiler.className='spoiler'; spoiler.dataset.revealed='false'; spoiler.tabIndex=0;
+  const text = document.createElement('div'); text.className='spoiler-text';
+  const isOdd = index===oddIndex; text.textContent = isOdd ? oddQuestion : commonQuestion;
+  const veil = document.createElement('div'); veil.className='veil'; veil.setAttribute('data-i18n','click_to_reveal'); veil.textContent = I18N[LANG].click_to_reveal;
+  const row = document.createElement('div'); row.className='row';
+  const btn = document.createElement('button'); btn.textContent = I18N[LANG].btn_show;
+  btn.addEventListener('click',()=>{
+    const revealed = spoiler.dataset.revealed==='true';
+    spoiler.dataset.revealed = revealed ? 'false' : 'true';
+    btn.textContent = revealed ? I18N[LANG].btn_show : I18N[LANG].btn_hide;
+  });
+  spoiler.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); btn.click(); }});
+  spoiler.addEventListener('click',e=>{ if(e.target.tagName.toLowerCase()!=='button') btn.click(); });
+
+  row.appendChild(btn);
+  spoiler.appendChild(text); spoiler.appendChild(veil);
+  card.appendChild(head); card.appendChild(spoiler); card.appendChild(row);
+  return card;
+}
+
+function render(){
+  document.getElementById('round-pill').textContent = `Round: ${currentRound} — ${tPackName(QUESTION_PACKS[currentPackIndex])}`;
+  const container = document.getElementById('cards'); container.innerHTML='';
+  PLAYER_NAMES.forEach((n,i)=> container.appendChild(makeCard(n,i)) );
+  // reset common box
+  document.getElementById('common').classList.remove('show');
+  document.getElementById('common-text').textContent='';
+  document.getElementById('hide-common').style.display='none';
+  // i18n dynamic parts inside cards
+  applyI18n(LANG);
+}
+
+function newRound(increment=true){ if(increment) currentRound++; rollRound(); render(); }
+
+/** ================= Init ================= */
+(function init(){
+  const sel = document.getElementById('lang'); sel.value = LANG; sel.addEventListener('change',()=>{
+    LANG = sel.value; localStorage.setItem('ooo_lang', LANG); applyI18n(LANG); render();
+  });
+  rollRound(); render();
+})();
+
+/** ================= Controls ================= */
+ document.getElementById('reveal-common').addEventListener('click',()=>{
+   document.getElementById('common-text').textContent = commonQuestion;
+   document.getElementById('common').classList.add('show');
+   document.getElementById('hide-common').style.display='inline-block';
+ });
+ document.getElementById('hide-common').addEventListener('click',()=>{
+   document.getElementById('common').classList.remove('show');
+   document.getElementById('hide-common').style.display='none';
+ });
+ document.getElementById('new-round').addEventListener('click',()=> newRound(true));
+</script>
+</body>
+</html>
